@@ -1,6 +1,7 @@
 #lang racket
 
 (require "neutils.rkt")
+(require plot)
 
 ;; Norm Emergence
 ;; Simulation of emergence of norms among populations of agents in 2-choice task
@@ -55,10 +56,7 @@
 ;; adj-proportional-B: agent boolean boolean -> agent
 ;; using the other proportional update rule
 (define (adj-proportional-B a act outcome)
-  (cond [act (cond [outcome (- a (* P (- 1.0 a)))]
-                   [else (+ a (* P (- 1.0 a)))])]
-        [else (cond [outcome (+ a (* P a))]
-                    [else (- a (* P a))])]))
+  (+ a (adj-prop-update-B a act outcome)))
 
 ;; adj-prop-update-B: agent boolean boolean -> agent
 ;; using the other proportional update rule, but return only the update, Delta_i, for this agent
@@ -103,7 +101,7 @@
      (update-func a1 a1-act conflict-outcome)
      (update-func a2 a2-act conflict-outcome))))
 
-;; one-iteration-f: population (number boolean boolean -> number) -> population
+;; one-iteration-f: population (number boolean boolean -> nu mber) -> population
 ;; randomly pair-up the given population, have each pair interact and be updated based on the given adjustf function.
 (define (one-iteration-f pop adjustf)
   (foldr (lambda (p r) (append (interact (first p) (second p) adjustf) r)) empty (pair-up pop)))
@@ -113,6 +111,15 @@
 (define (multi-iteration-f pop n adjustf)
   (cond [(zero? n) pop]
         [else (multi-iteration-f (one-iteration-f pop adjustf) (sub1 n) adjustf)]))
+
+
+;; build-pop-averages: pop N (number boolean boolean -> number) -> (listof number)
+;; construct the sequence of average bias in the population over n iterations
+(define (build-pop-averages p n f)
+  (cond [(zero? n) (list (average p))]
+        [else (let ((new-p (one-iteration-f p f)))
+                (cons (average new-p)
+                      (build-pop-averages new-p (sub1 n) f)))]))
 
 
 ;; sim-avg-update: population (number boolean boolean -> number) number -> number
@@ -131,3 +138,30 @@
 (define (sim-avgstd-delta pop adjustf)
   (list (sim-avg-delta pop adjustf 1)
         (stdv pop)))|#
+
+
+(plot (list (lines 
+             (let* ((data (build-pop-averages (build-list 20 (lambda (_) 0.5)) 100 apB)))
+               (build-list (length data)
+                           (lambda (n) (vector n (list-ref data n)))))
+             #:y-min 0 #:y-max 1)
+            (lines 
+             (let* ((data (build-pop-averages (build-list 20 (lambda (_) 0.5)) 100 apB)))
+               (build-list (length data)
+                           (lambda (n) (vector n (list-ref data n)))))
+             #:y-min 0 #:y-max 1)
+            (lines 
+             (let* ((data (build-pop-averages (build-list 20 (lambda (_) 0.5)) 100 apB)))
+               (build-list (length data)
+                           (lambda (n) (vector n (list-ref data n)))))
+             #:y-min 0 #:y-max 1)
+            (lines 
+             (let* ((data (build-pop-averages (build-list 20 (lambda (_) 0.5)) 100 apB)))
+               (build-list (length data)
+                           (lambda (n) (vector n (list-ref data n)))))
+             #:y-min 0 #:y-max 1)
+            (lines 
+             (let* ((data (build-pop-averages (build-list 20 (lambda (_) 0.5)) 100 apB)))
+               (build-list (length data)
+                           (lambda (n) (vector n (list-ref data n)))))
+             #:y-min 0 #:y-max 1)))
