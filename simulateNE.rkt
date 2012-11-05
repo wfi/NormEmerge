@@ -1,6 +1,8 @@
 #lang racket
 
 (require "neutils.rkt")
+(require plot)
+(require plot/utils)
 
 ;; Norm Emergence
 ;; Simulation of emergence of norms among populations of agents in 2-choice task
@@ -72,6 +74,19 @@
         [else (cond [outcome (* P a)]
                     [else (- (* P a))])]))
 
+;; adj-proportional-C: agent boolean boolean -> agent
+;; using the (new) third proportional update rule
+;; a_i =  + 0.5-|0.5-a_i| if chose act and coordinate
+;;     =  - 0.5-|0.5-a_i| if chose act and conflict
+;;     =  + 0.5-|0.5-a_i| if chose NOT-act and conflict
+;;     =  - 0.5-|0.5-a_i| if chose NOT-act and coordinate
+(define (adj-proportional-C a act outcome)
+  (local ([define weight (* P (- 0.5 (abs (- 0.5 a))))])
+  (cond [act (cond [outcome (- a weight)]
+                   [else (+ a weight)])]
+        [else (cond [outcome (+ a weight)]
+                    [else (- a weight)])])))
+
 ;; delta-i-propA2: agent boolean boolean -> agent
 ;; using variation of propA where adjustment is always function of gap yet-to-go with two proportions
 ;; delta-i = - Pn * (a_i) if choose act and conflict: decrease a_i by Pn of a_i
@@ -131,3 +146,13 @@
 (define (sim-avgstd-delta pop adjustf)
   (list (sim-avg-delta pop adjustf 1)
         (stdv pop)))|#
+
+;; mutli-iteration-plot : population N (number boolean boolean -> number) -> population
+(define (multi-iteration-plot pop n adjustf)
+  (cond [(zero? n) pop]
+        [else 
+         
+         
+         (local ([define new-pop (one-iteration-f pop adjustf)])
+                (plot (function (lambda (n) (/ (foldl 0 + new-pop) (length new-pop)))))
+         (multi-iteration-plot new-pop (sub1 n) adjustf))]))
