@@ -79,10 +79,10 @@
 ;;     =  - 0.5-|0.5-a_i| if chose NOT-act and coordinate
 (define (adj-proportional-C a act outcome)
   (local ([define weight (* P (- 0.5 (abs (- 0.5 a))))])
-  (cond [act (cond [outcome (- a weight)]
-                   [else (+ a weight)])]
-        [else (cond [outcome (+ a weight)]
-                    [else (- a weight)])])))
+    (cond [act (cond [outcome (- a weight)]
+                     [else (+ a weight)])]
+          [else (cond [outcome (+ a weight)]
+                      [else (- a weight)])])))
 
 ;; delta-i-propA2: agent boolean boolean -> agent
 ;; using variation of propA where adjustment is always function of gap yet-to-go with two proportions
@@ -160,31 +160,44 @@
          
          
          (local ([define new-pop (one-iteration-f pop adjustf)])
-                (plot (function (lambda (n) (/ (foldl 0 + new-pop) (length new-pop)))))
-         (multi-iteration-plot new-pop (sub1 n) adjustf))]))
+           (plot (function (lambda (n) (/ (foldl 0 + new-pop) (length new-pop)))))
+           (multi-iteration-plot new-pop (sub1 n) adjustf))]))
 
-(plot (list (lines 
-             (let* ((data (build-pop-averages (build-list 20 (lambda (_) 0.5)) 100 apB)))
-               (build-list (length data)
-                           (lambda (n) (vector n (list-ref data n)))))
-             #:y-min 0 #:y-max 1)
-            (lines 
-             (let* ((data (build-pop-averages (build-list 20 (lambda (_) 0.5)) 100 apB)))
-               (build-list (length data)
-                           (lambda (n) (vector n (list-ref data n)))))
-             #:y-min 0 #:y-max 1)
-            (lines 
-             (let* ((data (build-pop-averages (build-list 20 (lambda (_) 0.5)) 100 apB)))
-               (build-list (length data)
-                           (lambda (n) (vector n (list-ref data n)))))
-             #:y-min 0 #:y-max 1)
-            (lines 
-             (let* ((data (build-pop-averages (build-list 20 (lambda (_) 0.5)) 100 apB)))
-               (build-list (length data)
-                           (lambda (n) (vector n (list-ref data n)))))
-             #:y-min 0 #:y-max 1)
-            (lines 
-             (let* ((data (build-pop-averages (build-list 20 (lambda (_) 0.5)) 100 apB)))
-               (build-list (length data)
-                           (lambda (n) (vector n (list-ref data n)))))
-             #:y-min 0 #:y-max 1)))
+;; build-filtered-list
+(define (build-filtered-list n proc pred list)
+  (cond
+    [(zero? n) list]
+    [else (local ([define next-element (proc n)])
+            (cond
+              [(pred next-element) (build-filtered-list (sub1 n) proc pred (cons next-element list))]
+              [else (build-filtered-list n proc pred list)]))]))
+
+
+;; plot-simulation : population N (number boolean boolean -> number) number -> ?
+(define (plot-simulation pop n adjustf runs)
+  (plot (build-list runs (lambda(_) 
+                           (lines 
+                            (let* ((data (build-pop-averages pop n adjustf)))
+                              (build-list (length data)
+                                          (lambda (m) (vector m (list-ref data m)))))
+                            #:y-min 0 #:y-max 1)))))
+
+;; plot-filtered-simulation : population N (number boolean boolean -> number) number (list -> boolean) -> ?
+(define (plot-filtered-simulation pop n adjustf runs pred)
+  (plot (map (lambda (l) (lines l #:y-min 0 #:y-max 1)) (build-filtered-list runs (lambda(_) 
+                                                                                    (let* ((data (build-pop-averages pop n adjustf)))
+                                                                                      (build-list (length data)
+                                                                                                  (lambda (m) (vector m (list-ref data m))))))
+                                                                             pred
+                                                                             empty))))
+
+;; average-filtered-simulation
+(define (average-filtered-simulation pop n adjustf runs pred)
+(local ([define trials (build-filtered-list runs (lambda(_) 
+                              (let* ((data (build-pop-averages pop n adjustf)))
+                                (build-list (length data)
+                                            (lambda (m) (vector m (list-ref data m))))))
+                       pred
+                       empty)])
+    (build-list n 
+              (lambda (point) (vector point (/ (foldl + 0 (map (lambda (trial) (vector-ref (list-ref trial point) 1)) trials)) runs))))))
