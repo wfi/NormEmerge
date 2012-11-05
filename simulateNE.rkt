@@ -201,3 +201,10 @@
                        empty)])
     (build-list n 
               (lambda (point) (vector point (/ (foldl + 0 (map (lambda (trial) (vector-ref (list-ref trial point) 1)) trials)) runs))))))
+
+(plot-filtered-simulation (build-list 20 (lambda (_) 0.49)) 100 adj-proportional-B 10 (lambda (l) (< (vector-ref (last l) 1) 0.49)))
+
+(plot (list 
+       (lines (average-filtered-simulation (build-list 20 (lambda (_) 0.49)) 150 adj-proportional-B 10 (lambda (l) (< (vector-ref (last l) 1) 0.49))) #:y-min 0 #:y-max 1)
+       ;(function ))
+       ))
