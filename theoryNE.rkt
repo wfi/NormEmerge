@@ -58,7 +58,7 @@
 (define (avg-pibar-delta-propB pop)
   (delta-bar pop delta-i-pibar-propB))
 
-;; delta-bar: population (agent number -> number) -> population
+;; delta-bar: population (agent number number -> number) -> population
 ;; abstract version of the average functions for propA/probB with pbar/pibar
 (define (delta-bar pop f-delta-i)
   (let ((pbar (average pop))
