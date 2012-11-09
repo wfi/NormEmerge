@@ -2,6 +2,8 @@
 
 (require "neutils.rkt")
 
+(provide (all-defined-out))
+
 ;; Theory code for Norm Emergence Analysis
 ;; Two-choice task
 
@@ -63,3 +65,7 @@
         (psize (length pop)))
     (map (lambda (a) (f-delta-i a pbar psize)) pop)))
 
+;; variance-t-plus-one
+(define (variance-t-plus-one pop adj-f)
+  (local ([define pbar-t-plus-one (/ (foldl + 0 (map adj-f pop)) (length pop))])
+    (/ (foldl + 0 (map (lambda (pi) (sqr (- (adj-f pi) pbar-t-plus-one))) pop)) (length pop))))
