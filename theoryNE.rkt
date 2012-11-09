@@ -58,14 +58,14 @@
 (define (avg-pibar-delta-propB pop)
   (delta-bar pop delta-i-pibar-propB))
 
-;; delta-bar: population (agent number number -> number) -> population
+;; delta-bar: population (agent number -> number) -> population
 ;; abstract version of the average functions for propA/probB with pbar/pibar
 (define (delta-bar pop f-delta-i)
   (let ((pbar (average pop))
         (psize (length pop)))
     (map (lambda (a) (f-delta-i a pbar psize)) pop)))
 
-;; variance-t-plus-one
+;; variance-t-plus-one : population 
 (define (variance-t-plus-one pop adj-f)
   (local ([define pbar-t-plus-one (/ (foldl + 0 (map adj-f pop)) (length pop))])
     (/ (foldl + 0 (map (lambda (pi) (sqr (- (adj-f pi) pbar-t-plus-one))) pop)) (length pop))))

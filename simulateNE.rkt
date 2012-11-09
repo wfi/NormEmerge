@@ -212,14 +212,14 @@
     [else (theoretical-model (sub1 n) (list (+ p-list (first (avg-pbar-delta-propB (list p-list)))) p-list))]))
 
 ;; theoretical-model-with-variance :
-(define (theoretical-mode-with-variance n pop list)
+(define (theoretical-model-with-variance n pop list)
     (cond
     [(zero? (sub1 n)) (reverse list)]
     [(empty? list) (theoretical-model-with-variance (sub1 n))]
-    [else (theoretical-model (sub1 n) (list (+ p-list (first (avg-pbar-delta-propB (list p-list)))) p-list))]))
+    [else (theoretical-model-with-variance (sub1 n) (list (+ list (first (avg-pbar-delta-propB (list list)))) list))]))
 
 ;(plot-filtered-simulation (build-list 20 (lambda (_) 0.49)) 150 adj-proportional-B 100 (lambda (l) (< (vector-ref (last l) 1) 0.49)))
 
 (plot (list 
-       (lines (average-filtered-simulation (build-list 20 (lambda (_) 0.49)) 150 adj-proportional-B 100 (lambda (l) (< (vector-ref (last l) 1) 0.49))) #:y-min 0 #:y-max 1)
-       (lines (map (lambda (x y) (vector x y)) (build-list 150 (lambda (x) x)) (theoretical-model 150 0.49)) #:y-min 0 #:y-max 1)))
+       (lines (average-filtered-simulation (build-list 20 (lambda (_) 0.49)) 500 adj-proportional-B 100 (lambda (l) (< (vector-ref (last l) 1) 0.3))) #:y-min 0 #:y-max 1)
+       (lines (map (lambda (x y) (vector x y)) (build-list 500 (lambda (x) x)) (theoretical-model 500 0.49)) #:y-min 0 #:y-max 1)))
