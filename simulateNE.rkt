@@ -203,13 +203,17 @@
     (build-list n 
               (lambda (point) (vector point (/ (foldl + 0 (map (lambda (trial) (vector-ref (list-ref trial point) 1)) trials)) runs))))))
 
-;; theoretical-model : N number/population -> list
+;; theoretical-model : N number/population -> (listof number)
 ;; called with the desired size of the list and the starting value of pbar
 (define (theoretical-model n p-list)
   (cond
     [(zero? (sub1 n)) (reverse p-list)]
     [(list? p-list) (theoretical-model (sub1 n) (cons (+ (first p-list) (first (avg-pbar-delta-propB (list (first p-list))))) p-list))]
     [else (theoretical-model (sub1 n) (list (+ p-list (first (avg-pbar-delta-propB (list p-list)))) p-list))]))
+
+;; theoretical-model-points : number number -> (listof (vector number number))
+(define (theoretical-model-points n pbar0)
+  (map (lambda (x y) (vector x y)) (build-list n (lambda (x) x)) (theoretical-model n pbar0)))
 
 ;; theoretical-model-with-variance :
 (define (theoretical-model-with-variance n pop list)
@@ -221,5 +225,5 @@
 ;(plot-filtered-simulation (build-list 20 (lambda (_) 0.49)) 150 adj-proportional-B 100 (lambda (l) (< (vector-ref (last l) 1) 0.49)))
 
 (plot (list 
-       (lines (average-filtered-simulation (build-list 20 (lambda (_) 0.49)) 500 adj-proportional-B 100 (lambda (l) (< (vector-ref (last l) 1) 0.3))) #:y-min 0 #:y-max 1)
-       (lines (map (lambda (x y) (vector x y)) (build-list 500 (lambda (x) x)) (theoretical-model 500 0.49)) #:y-min 0 #:y-max 1)))
+       (lines (average-filtered-simulation (build-list 20 (lambda (_) 0.49)) 200 adj-proportional-B 100 (lambda (l) (< (vector-ref (last l) 1) 0.3))) #:y-min 0 #:y-max 1)
+       (lines (theoretical-model-points 200 0.49) #:y-min 0 #:y-max 1)))
