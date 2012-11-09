@@ -192,7 +192,8 @@
                                                                              pred
                                                                              empty))))
 
-;; average-filtered-simulation
+;; average-filtered-simulation: population number (number boolean boolean -> number) number ((listof (vector number number)) -> boolean) -> (listof (vector number number))
+;; create a plottable list of vector pairs averaged over 'runs' runs satisfying 'pred' starting with a given population out to n timesteps
 (define (average-filtered-simulation pop n adjustf runs pred)
 (local ([define trials (build-filtered-list runs (lambda(_) 
                               (let* ((data (build-pop-averages pop n adjustf)))
