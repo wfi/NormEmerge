@@ -1,6 +1,7 @@
 #lang racket
 
 (require "neutils.rkt")
+(require "theoryNE.rkt")
 (require plot)
 (require plot/utils)
 
@@ -13,7 +14,7 @@
 
 (define X 0.01)
 (define CONST-INC X)
-(define P 0.05) ;; proportional update factor
+;(define P 0.05) ;; proportional update factor
 (define Pp 0.01);; proportion for coordination
 (define Pn 0.02);; proportion for conflict
 
@@ -202,9 +203,23 @@
     (build-list n 
               (lambda (point) (vector point (/ (foldl + 0 (map (lambda (trial) (vector-ref (list-ref trial point) 1)) trials)) runs))))))
 
-(plot-filtered-simulation (build-list 20 (lambda (_) 0.49)) 100 adj-proportional-B 10 (lambda (l) (< (vector-ref (last l) 1) 0.49)))
+;; theoretical-model : N number/population -> list
+;; called with the desired size of the list and the starting value of pbar
+(define (theoretical-model n p-list)
+  (cond
+    [(zero? (sub1 n)) (reverse p-list)]
+    [(list? p-list) (theoretical-model (sub1 n) (cons (+ (first p-list) (first (avg-pbar-delta-propB (list (first p-list))))) p-list))]
+    [else (theoretical-model (sub1 n) (list (+ p-list (first (avg-pbar-delta-propB (list p-list)))) p-list))]))
+
+;; theoretical-model-with-variance :
+(define (theoretical-mode-with-variance n pop list)
+    (cond
+    [(zero? (sub1 n)) (reverse list)]
+    [(empty? list) (theoretical-model-with-variance (sub1 n))]
+    [else (theoretical-model (sub1 n) (list (+ p-list (first (avg-pbar-delta-propB (list p-list)))) p-list))]))
+
+;(plot-filtered-simulation (build-list 20 (lambda (_) 0.49)) 150 adj-proportional-B 100 (lambda (l) (< (vector-ref (last l) 1) 0.49)))
 
 (plot (list 
-       (lines (average-filtered-simulation (build-list 20 (lambda (_) 0.49)) 150 adj-proportional-B 10 (lambda (l) (< (vector-ref (last l) 1) 0.49))) #:y-min 0 #:y-max 1)
-       ;(function ))
-       ))
+       (lines (average-filtered-simulation (build-list 20 (lambda (_) 0.49)) 150 adj-proportional-B 100 (lambda (l) (< (vector-ref (last l) 1) 0.49))) #:y-min 0 #:y-max 1)
+       (lines (map (lambda (x y) (vector x y)) (build-list 150 (lambda (x) x)) (theoretical-model 150 0.49)) #:y-min 0 #:y-max 1)))
