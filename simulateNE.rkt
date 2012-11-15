@@ -74,12 +74,12 @@
 
 ;; adj-proportional-C: agent boolean boolean -> agent
 ;; using the (new) third proportional update rule
-;; a_i =  + 0.5-|0.5-a_i| if chose act and coordinate
-;;     =  - 0.5-|0.5-a_i| if chose act and conflict
-;;     =  + 0.5-|0.5-a_i| if chose NOT-act and conflict
-;;     =  - 0.5-|0.5-a_i| if chose NOT-act and coordinate
+;; a_i =  + 0.5-(0.5-a_i)^2 if chose act and coordinate
+;;     =  - 0.5-(0.5-a_i)^2 if chose act and conflict
+;;     =  + 0.5-(0.5-a_i)^2 if chose NOT-act and conflict
+;;     =  - 0.5-(0.5-a_i)^2 if chose NOT-act and coordinate
 (define (adj-proportional-C a act outcome)
-  (local ([define weight (* P (- 0.5 (abs (- 0.5 a))))])
+  (local ([define weight (* P (- 0.5 (sqr (- 0.5 a))))])
     (cond [act (cond [outcome (- a weight)]
                      [else (+ a weight)])]
           [else (cond [outcome (+ a weight)]
