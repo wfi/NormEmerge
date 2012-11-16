@@ -7,8 +7,6 @@
 ;; Theory code for Norm Emergence Analysis
 ;; Two-choice task
 
-(define P 0.05) ;; proportional update factor
-
 
 ;;--- compute expected Delta-i's and Delta-bars based either pibar or on the estimate, pbar
 
@@ -29,6 +27,10 @@
 (define (delta-i-pbar-propB a pbar psize)
   (* 2 P (- a (sqr a)) (- (* 2 pbar) 1.0)))
 
+;; delta-i-pbar-propC: agent number number -> number
+(define (delta-i-pbar-propC a pbar psize)
+  (* P (- 0.5 (sqr (- 0.5 a))) (- (* 2 pbar) 1)))
+     ;(- (* 2 pbar) 1) (+ (* 0.25 psize) pbar (- (sqr pbar)) 
 
 ;; avg-pbar-delta-propA: population -> number
 ;; using the PROPORTIONAL-A method, 1/n * (P * summate( pbar - a )), compute the average delta based on the given population values.
@@ -58,7 +60,12 @@
 (define (avg-pibar-delta-propB pop)
   (delta-bar pop delta-i-pibar-propB))
 
-;; delta-bar: population (agent number -> number) -> population
+;; avg-pbar-delta-propC: population -> (listof number)
+;; compute the Delta-bar for the given population based on the actual pibar value
+(define (avg-pbar-delta-propC pop)
+  (delta-bar pop delta-i-pbar-propC))
+
+;; delta-bar: population (agent number -> number) -> (listof number)
 ;; abstract version of the average functions for propA/probB with pbar/pibar
 (define (delta-bar pop f-delta-i)
   (let ((pbar (average pop))
