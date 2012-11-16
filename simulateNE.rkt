@@ -14,7 +14,6 @@
 
 (define X 0.01)
 (define CONST-INC X)
-;(define P 0.05) ;; proportional update factor
 (define Pp 0.01);; proportion for coordination
 (define Pn 0.02);; proportion for conflict
 
@@ -224,11 +223,18 @@
     [else (theoretical-model-with-variance (sub1 n) (list (+ list (first (avg-pbar-delta-propB (list list)))) list))]))
 
 ;; plot-variances-over-time-with-comparison
-(define (plot-variances-over-time pop n adjustf)
+(define (plot-variances-over-time pop n adjustf theoretical-adjustf)
   (plot (list
-         (lines (map (lambda (x y) (vector x y)) (build-list n (lambda (m) m)) (variances-over-time pop n empty adjustf)) #:y-min 0 #:y-max 1)))) 
-    
-;; variances-over-time
+         (lines (map (lambda (x y) (vector x y)) (build-list n (lambda (m) m)) (variances-over-time pop n empty adjustf)) #:y-min 0 #:y-max 0.1)
+         (lines (map (lambda (x y) (vector x y)) (build-list n (lambda (m) m)) (theoretical-variances-over-time pop n empty theoretical-adjustf)) #:y-min 0 #:y-max 0.1)))) 
+ 
+;; theoretical-variances-over-time : (listof number) number (list of number) (agent number -> number) -> (list of number)
+(define (theoretical-variances-over-time pop n variances adjustf)
+  (cond
+    [(zero? n) (reverse variances)]
+    [else (theoretical-variances-over-time (map + pop (adjustf pop)) (sub1 n) (cons (variance pop) variances) adjustf)]))
+
+;; variances-over-time : (listof number) number (list of number) (agent number -> number) -> (list of number)
 (define (variances-over-time pop n variances adjustf)
   (cond [(zero? n) (reverse variances)]
         [else (variances-over-time (one-iteration-f pop adjustf) (sub1 n) (cons (variance pop) variances) adjustf)]))
@@ -239,5 +245,4 @@
        (lines (average-filtered-simulation (build-list 20 (lambda (_) 0.49)) 200 adj-proportional-B 100 (lambda (l) (< (vector-ref (last l) 1) 0.3))) #:y-min 0 #:y-max 1)
        (lines (theoretical-model-points 200 0.49) #:y-min 0 #:y-max 1)))|#
 
-(plot-variances-over-time (make-rand-pop 20 0.49 2) 150 adj-proportional-C)
-(make-rand-pop 20 0.49 2)
+(plot-variances-over-time (make-rand-pop 20 0.49 2) 150 adj-proportional-C avg-pbar-delta-propC)
