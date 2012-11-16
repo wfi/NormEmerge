@@ -223,8 +223,21 @@
     [(empty? list) (theoretical-model-with-variance (sub1 n))]
     [else (theoretical-model-with-variance (sub1 n) (list (+ list (first (avg-pbar-delta-propB (list list)))) list))]))
 
+;; plot-variances-over-time-with-comparison
+(define (plot-variances-over-time pop n adjustf)
+  (plot (list
+         (lines (map (lambda (x y) (vector x y)) (build-list n (lambda (m) m)) (variances-over-time pop n empty adjustf)) #:y-min 0 #:y-max 1)))) 
+    
+;; variances-over-time
+(define (variances-over-time pop n variances adjustf)
+  (cond [(zero? n) (reverse variances)]
+        [else (variances-over-time (one-iteration-f pop adjustf) (sub1 n) (cons (variance pop) variances) adjustf)]))
+
 ;(plot-filtered-simulation (build-list 20 (lambda (_) 0.49)) 150 adj-proportional-B 100 (lambda (l) (< (vector-ref (last l) 1) 0.49)))
 
-(plot (list 
+#|(plot (list 
        (lines (average-filtered-simulation (build-list 20 (lambda (_) 0.49)) 200 adj-proportional-B 100 (lambda (l) (< (vector-ref (last l) 1) 0.3))) #:y-min 0 #:y-max 1)
-       (lines (theoretical-model-points 200 0.49) #:y-min 0 #:y-max 1)))
+       (lines (theoretical-model-points 200 0.49) #:y-min 0 #:y-max 1)))|#
+
+(plot-variances-over-time (make-rand-pop 20 0.49 2) 150 adj-proportional-C)
+(make-rand-pop 20 0.49 2)
