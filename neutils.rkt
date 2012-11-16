@@ -4,6 +4,8 @@
 
 (provide (all-defined-out))
 
+(define P 0.05) ;; proportional update factor
+
 ;;--- Basic Utilities
 
 ;; average : (listof number) -> number
