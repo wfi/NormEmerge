@@ -1,6 +1,7 @@
 #lang racket
 
 (require games/cards)
+(require (planet williams/science/random-distributions))
 
 (provide (all-defined-out))
 
@@ -24,10 +25,28 @@
 
 ;;--- Population Utilities
 
+;; get-random-beta: number number -> number
+;; generate random number from Beta distribution with mean and variance (sigma^2)
+;; NOTE: random-beta (provided by williams/science/random-distributions) will take forever with certain combinations
+;; of means and variances.  If the variance is significantly less than the smaller distance of the mean to 0 or 1, it seems to work okay
+(define (get-random-beta mean var)
+  (let ((a (/ (- (sqr mean) (expt mean 3) (* mean var)) var))
+        (b (/ (+  mean (* -2 (sqr mean)) (expt mean 3) (* -1 var) (* mean var)) var)))
+    (random-beta a b)))
+
+;; make-beta-pop: number number number -> population
+;; create a population having n agents with mean bias of variance as given by mean and var
+(define (make-beta-pop n mean var)
+  (build-list n
+              (lambda (_) (get-random-beta mean var))))
+
+;; *** DEPRECATED
 ;; make-rand-pop: number number number -> population
 ;; create a population having n agents centered around a mean with a spread scale * [-0.05,0.05]
 ;; thus, acceptable ranges for spread are 0 (no variation at all) up to 10 with the proviso that the mean is 0.5.
+;; DEPRECATED: use make-beta-pop instead ***
 (define (make-rand-pop n mean spread)
+  (error 'make-rand-pop "this function is deprecated -- try using make-beta-pop instead")
   (build-list n 
               (lambda (_) (max 0 (min 1 (+ mean (* spread (- (/ (random 1000) 10000.0) 0.05))))))))
 
