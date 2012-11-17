@@ -72,7 +72,11 @@
         (psize (length pop)))
     (map (lambda (a) (f-delta-i a pbar psize)) pop)))
 
-;; variance-t-plus-one : population (agent number -> number) -> number
+;; variance-t-plus-one: population (agent number -> number) -> number
 (define (variance-t-plus-one pop adj-f)
   (local ([define pbar-t-plus-one (/ (foldl + 0 (map adj-f pop)) (length pop))])
     (/ (foldl + 0 (map (lambda (pi) (sqr (- (adj-f pi) pbar-t-plus-one))) pop)) (length pop))))
+
+;; delta-bar-propC: number number number -> number
+(define (delta-bar-propC pbar psize variance)
+  (* (- (* 2 pbar) 1) (+ (* 0.25 psize) pbar (- (sqr pbar)) (- variance))))

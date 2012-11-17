@@ -211,11 +211,11 @@
     [(list? p-list) (theoretical-model (sub1 n) (cons (+ (first p-list) (first (avg-pbar-delta-propB (list (first p-list))))) p-list))]
     [else (theoretical-model (sub1 n) (list (+ p-list (first (avg-pbar-delta-propB (list p-list)))) p-list))]))
 
-;; theoretical-model-points : number number -> (listof (vector number number))
+;; theoretical-model-points: number number -> (listof (vector number number))
 (define (theoretical-model-points n pbar0)
   (map (lambda (x y) (vector x y)) (build-list n (lambda (x) x)) (theoretical-model n pbar0)))
 
-;; theoretical-model-with-variance :
+;; theoretical-model-with-variance:
 (define (theoretical-model-with-variance n pop list)
     (cond
     [(zero? (sub1 n)) (reverse list)]
@@ -239,10 +239,21 @@
   (cond [(zero? n) (reverse variances)]
         [else (variances-over-time (one-iteration-f pop adjustf) (sub1 n) (cons (variance pop) variances) adjustf)]))
 
+;; compute-errors-prop-C: population number -> (pair number number)
+;; For a given a population, compute (1) observed pbar from n match-ups, (2) expected pbar using theoretical delta_i, and
+;; (3) expectd pbar using estimated expression based on pbar and population variance.  Return the errors between 1 and 2, and between 2 and 3.
+(define (compute-errors pop n)
+  (local ([define psize (length pop)]
+          [define pbar (/ (foldl + 0 pop) psize)]
+          [define pbar1 (/ (foldl + 0 (build-list n (lambda (_) (/ (foldl + 0 (one-iteration-f pop adj-proportional-C)) psize)))) n)]
+          [define pbar2 (/ (foldl + 0 (map + pop (avg-pbar-delta-propC pop))) psize)]
+          [define pbar3 (+ pbar (delta-bar-propC pbar psize (variance pop)))])
+            (cons (- pbar1 pbar2) (- pbar1 pbar3))))
+
 ;(plot-filtered-simulation (build-list 20 (lambda (_) 0.49)) 150 adj-proportional-B 100 (lambda (l) (< (vector-ref (last l) 1) 0.49)))
 
 #|(plot (list 
        (lines (average-filtered-simulation (build-list 20 (lambda (_) 0.49)) 200 adj-proportional-B 100 (lambda (l) (< (vector-ref (last l) 1) 0.3))) #:y-min 0 #:y-max 1)
        (lines (theoretical-model-points 200 0.49) #:y-min 0 #:y-max 1)))|#
 
-(plot-variances-over-time (make-rand-pop 20 0.49 2) 150 adj-proportional-C avg-pbar-delta-propC)
+;(plot-variances-over-time (make-rand-pop 20 0.49 2) 150 adj-proportional-C avg-pbar-delta-propC)
