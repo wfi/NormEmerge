@@ -1,7 +1,9 @@
 #lang racket
 
 (require "neutils.rkt")
+(require "theoryNE.rkt")
 (require plot)
+(require plot/utils)
 
 ;; Norm Emergence
 ;; Simulation of emergence of norms among populations of agents in 2-choice task
@@ -12,7 +14,6 @@
 
 (define X 0.01)
 (define CONST-INC X)
-(define P 0.05) ;; proportional update factor
 (define Pp 0.01);; proportion for coordination
 (define Pn 0.02);; proportion for conflict
 
@@ -69,6 +70,19 @@
                    [else (* P (- 1.0 a))])]
         [else (cond [outcome (* P a)]
                     [else (- (* P a))])]))
+
+;; adj-proportional-C: agent boolean boolean -> agent
+;; using the (new) third proportional update rule
+;; a_i =  + 0.5-(0.5-a_i)^2 if chose act and coordinate
+;;     =  - 0.5-(0.5-a_i)^2 if chose act and conflict
+;;     =  + 0.5-(0.5-a_i)^2 if chose NOT-act and conflict
+;;     =  - 0.5-(0.5-a_i)^2 if chose NOT-act and coordinate
+(define (adj-proportional-C a act outcome)
+  (local ([define weight (* P (- 0.5 (sqr (- 0.5 a))))])
+    (cond [act (cond [outcome (- a weight)]
+                     [else (+ a weight)])]
+          [else (cond [outcome (+ a weight)]
+                      [else (- a weight)])])))
 
 ;; delta-i-propA2: agent boolean boolean -> agent
 ;; using variation of propA where adjustment is always function of gap yet-to-go with two proportions
@@ -139,29 +153,96 @@
   (list (sim-avg-delta pop adjustf 1)
         (stdv pop)))|#
 
+;; mutli-iteration-plot : population N (number boolean boolean -> number) -> population
+(define (multi-iteration-plot pop n adjustf)
+  (cond [(zero? n) pop]
+        [else 
+         
+         
+         (local ([define new-pop (one-iteration-f pop adjustf)])
+           (plot (function (lambda (n) (/ (foldl 0 + new-pop) (length new-pop)))))
+           (multi-iteration-plot new-pop (sub1 n) adjustf))]))
 
-(plot (list (lines 
-             (let* ((data (build-pop-averages (build-list 20 (lambda (_) 0.5)) 100 apB)))
-               (build-list (length data)
-                           (lambda (n) (vector n (list-ref data n)))))
-             #:y-min 0 #:y-max 1)
-            (lines 
-             (let* ((data (build-pop-averages (build-list 20 (lambda (_) 0.5)) 100 apB)))
-               (build-list (length data)
-                           (lambda (n) (vector n (list-ref data n)))))
-             #:y-min 0 #:y-max 1)
-            (lines 
-             (let* ((data (build-pop-averages (build-list 20 (lambda (_) 0.5)) 100 apB)))
-               (build-list (length data)
-                           (lambda (n) (vector n (list-ref data n)))))
-             #:y-min 0 #:y-max 1)
-            (lines 
-             (let* ((data (build-pop-averages (build-list 20 (lambda (_) 0.5)) 100 apB)))
-               (build-list (length data)
-                           (lambda (n) (vector n (list-ref data n)))))
-             #:y-min 0 #:y-max 1)
-            (lines 
-             (let* ((data (build-pop-averages (build-list 20 (lambda (_) 0.5)) 100 apB)))
-               (build-list (length data)
-                           (lambda (n) (vector n (list-ref data n)))))
-             #:y-min 0 #:y-max 1)))
+;; build-filtered-list
+(define (build-filtered-list n proc pred list)
+  (cond
+    [(zero? n) list]
+    [else (local ([define next-element (proc n)])
+            (cond
+              [(pred next-element) (build-filtered-list (sub1 n) proc pred (cons next-element list))]
+              [else (build-filtered-list n proc pred list)]))]))
+
+
+;; plot-simulation : population N (number boolean boolean -> number) number -> ?
+(define (plot-simulation pop n adjustf runs)
+  (plot (build-list runs (lambda(_) 
+                           (lines 
+                            (let* ((data (build-pop-averages pop n adjustf)))
+                              (build-list (length data)
+                                          (lambda (m) (vector m (list-ref data m)))))
+                            #:y-min 0 #:y-max 1)))))
+
+;; plot-filtered-simulation : population N (number boolean boolean -> number) number (list -> boolean) -> ?
+(define (plot-filtered-simulation pop n adjustf runs pred)
+  (plot (map (lambda (l) (lines l #:y-min 0 #:y-max 1)) (build-filtered-list runs (lambda(_) 
+                                                                                    (let* ((data (build-pop-averages pop n adjustf)))
+                                                                                      (build-list (length data)
+                                                                                                  (lambda (m) (vector m (list-ref data m))))))
+                                                                             pred
+                                                                             empty))))
+
+;; average-filtered-simulation: population number (number boolean boolean -> number) number ((listof (vector number number)) -> boolean) -> (listof (vector number number))
+;; create a plottable list of vector pairs averaged over 'runs' runs satisfying 'pred' starting with a given population out to n timesteps
+(define (average-filtered-simulation pop n adjustf runs pred)
+(local ([define trials (build-filtered-list runs (lambda(_) 
+                              (let* ((data (build-pop-averages pop n adjustf)))
+                                (build-list (length data)
+                                            (lambda (m) (vector m (list-ref data m))))))
+                       pred
+                       empty)])
+    (build-list n 
+              (lambda (point) (vector point (/ (foldl + 0 (map (lambda (trial) (vector-ref (list-ref trial point) 1)) trials)) runs))))))
+
+;; theoretical-model : N number/population -> (listof number)
+;; called with the desired size of the list and the starting value of pbar
+(define (theoretical-model n p-list)
+  (cond
+    [(zero? (sub1 n)) (reverse p-list)]
+    [(list? p-list) (theoretical-model (sub1 n) (cons (+ (first p-list) (first (avg-pbar-delta-propB (list (first p-list))))) p-list))]
+    [else (theoretical-model (sub1 n) (list (+ p-list (first (avg-pbar-delta-propB (list p-list)))) p-list))]))
+
+;; theoretical-model-points : number number -> (listof (vector number number))
+(define (theoretical-model-points n pbar0)
+  (map (lambda (x y) (vector x y)) (build-list n (lambda (x) x)) (theoretical-model n pbar0)))
+
+;; theoretical-model-with-variance :
+(define (theoretical-model-with-variance n pop list)
+    (cond
+    [(zero? (sub1 n)) (reverse list)]
+    [(empty? list) (theoretical-model-with-variance (sub1 n))]
+    [else (theoretical-model-with-variance (sub1 n) (list (+ list (first (avg-pbar-delta-propB (list list)))) list))]))
+
+;; plot-variances-over-time-with-comparison
+(define (plot-variances-over-time pop n adjustf theoretical-adjustf)
+  (plot (list
+         (lines (map (lambda (x y) (vector x y)) (build-list n (lambda (m) m)) (variances-over-time pop n empty adjustf)) #:y-min 0 #:y-max 0.1)
+         (lines (map (lambda (x y) (vector x y)) (build-list n (lambda (m) m)) (theoretical-variances-over-time pop n empty theoretical-adjustf)) #:y-min 0 #:y-max 0.1)))) 
+ 
+;; theoretical-variances-over-time : (listof number) number (list of number) (agent number -> number) -> (list of number)
+(define (theoretical-variances-over-time pop n variances adjustf)
+  (cond
+    [(zero? n) (reverse variances)]
+    [else (theoretical-variances-over-time (map + pop (adjustf pop)) (sub1 n) (cons (variance pop) variances) adjustf)]))
+
+;; variances-over-time : (listof number) number (list of number) (agent number -> number) -> (list of number)
+(define (variances-over-time pop n variances adjustf)
+  (cond [(zero? n) (reverse variances)]
+        [else (variances-over-time (one-iteration-f pop adjustf) (sub1 n) (cons (variance pop) variances) adjustf)]))
+
+;(plot-filtered-simulation (build-list 20 (lambda (_) 0.49)) 150 adj-proportional-B 100 (lambda (l) (< (vector-ref (last l) 1) 0.49)))
+
+#|(plot (list 
+       (lines (average-filtered-simulation (build-list 20 (lambda (_) 0.49)) 200 adj-proportional-B 100 (lambda (l) (< (vector-ref (last l) 1) 0.3))) #:y-min 0 #:y-max 1)
+       (lines (theoretical-model-points 200 0.49) #:y-min 0 #:y-max 1)))|#
+
+(plot-variances-over-time (make-rand-pop 20 0.49 2) 150 adj-proportional-C avg-pbar-delta-propC)

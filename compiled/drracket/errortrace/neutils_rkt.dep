@@ -1,1 +1,0 @@
-("5.3" ("d2fce829819818952c187fc25721942511efc772" . "84b7b78fd2d8853e92d958b64604cd9fa9154cfd") (collects #"games" #"cards.rkt") (collects #"racket" #"main.rkt") (collects #"errortrace" #"errortrace-key.rkt") (collects #"racket" #"lang" #"reader.rkt"))
