@@ -239,16 +239,22 @@
   (cond [(zero? n) (reverse variances)]
         [else (variances-over-time (one-iteration-f pop adjustf) (sub1 n) (cons (variance pop) variances) adjustf)]))
 
-;; compute-errors-prop-C: population number -> (pair number number)
+;; compute-errors-propC: population number -> (pair number number)
 ;; For a given a population, compute (1) observed pbar from n match-ups, (2) expected pbar using theoretical delta_i, and
 ;; (3) expectd pbar using estimated expression based on pbar and population variance.  Return the errors between 1 and 2, and between 2 and 3.
-(define (compute-errors pop n)
+(define (compute-errors-propC pop n)
   (local ([define psize (length pop)]
           [define pbar (/ (foldl + 0 pop) psize)]
           [define pbar1 (/ (foldl + 0 (build-list n (lambda (_) (/ (foldl + 0 (one-iteration-f pop adj-proportional-C)) psize)))) n)]
           [define pbar2 (/ (foldl + 0 (map + pop (avg-pbar-delta-propC pop))) psize)]
           [define pbar3 (+ pbar (delta-bar-propC pbar psize (variance pop)))])
             (cons (- pbar1 pbar2) (- pbar1 pbar3))))
+
+;; plot-errors-propC: (listof population) number ((pairof number) -> number) -> image
+;; plots one of the errors (determined by selector) calculated by compute-errors-propC for the given population
+(define (plot-errors-propC pops n selector)
+  (local ([define errors (map (lambda (pop) (compute-errors-propC pop n)) pops)])
+    (plot3d (list (points3d (map (lambda (pop error) (vector (average pop) (variance pop) (selector error))) pops errors))))))
 
 ;(plot-filtered-simulation (build-list 20 (lambda (_) 0.49)) 150 adj-proportional-B 100 (lambda (l) (< (vector-ref (last l) 1) 0.49)))
 
@@ -257,3 +263,7 @@
        (lines (theoretical-model-points 200 0.49) #:y-min 0 #:y-max 1)))|#
 
 ;(plot-variances-over-time (make-rand-pop 20 0.49 2) 150 adj-proportional-C avg-pbar-delta-propC)
+
+(define a-pop (build-list 50 (lambda (_) (make-beta-pop 20 0.5 .05))))
+(plot-errors-propC a-pop 100 car)
+(plot-errors-propC a-pop 100 cdr)
