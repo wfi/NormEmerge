@@ -78,7 +78,10 @@
 ;;     =  + 0.5-(0.5-a_i)^2 if chose NOT-act and conflict
 ;;     =  - 0.5-(0.5-a_i)^2 if chose NOT-act and coordinate
 (define (adj-proportional-C a act outcome)
-  (local ([define weight (* P (- 0.5 (sqr (- 0.5 a))))])
+  (local ([define weight (* P 
+                            (- 0.5 (sqr (- 0.5 a))) ;; this isn't what we want as when a is 0 or 1, it still gives 0.25
+                            ;;(- 1 (sqr (- (* 2 a) 1))) ;; scaling the ends and middle to 0 and 1 respectively
+                            )])
     (cond [act (cond [outcome (- a weight)]
                      [else (+ a weight)])]
           [else (cond [outcome (+ a weight)]
