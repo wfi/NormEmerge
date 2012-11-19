@@ -114,20 +114,25 @@
 
 ;;--- Agent Interactions --------------------
 
-;; interact : agent agent (agent boolean boolean -> agent) -> (agent agent)
-;; for two agents, interact and update according to the given update function
-(define (interact a1 a2 update-func)
+;; get-agent-interaction: agent agent -> (values boolean boolean boolean)
+;; return the selected action of the two agents (in consistent order) and the conflict value between them
+(define (get-agent-interaction a1 a2)
   (local ((define a1-act (<= (random) a1))
           (define a2-act (<= (random) a2))
           (define (xor b1 b2)
             (and (or b1 b2) (not (and b1 b2))))
-          (define conflict-outcome (xor a1-act a2-act))
-          )
+          (define conflict-outcome (xor a1-act a2-act)))
+    (values a1-act a2-act conflict-outcome)))
+
+;; interact : agent agent (agent boolean boolean -> agent) -> (agent agent)
+;; for two agents, interact and update according to the given update function
+(define (interact a1 a2 update-func)
+  (let-values ([(a1-act a2-act conflict-outcome) (get-agent-interaction a1 a2)])
     (list
      (update-func a1 a1-act conflict-outcome)
      (update-func a2 a2-act conflict-outcome))))
 
-;; one-iteration-f: population (number boolean boolean -> nu mber) -> population
+;; one-iteration-f: population (number boolean boolean -> number) -> population
 ;; randomly pair-up the given population, have each pair interact and be updated based on the given adjustf function.
 (define (one-iteration-f pop adjustf)
   (foldr (lambda (p r) (append (interact (first p) (second p) adjustf) r)) empty (pair-up pop)))
@@ -148,13 +153,21 @@
                       (build-pop-averages new-p (sub1 n) f)))]))
 
 
-;; sim-avg-update: population (number boolean boolean -> number) number -> number
-;; for the given agent-adjustment update function, compute the avg delta for one interaction and update of the given population
-;; optionally, average this over ntimes with the same population but different pairings
-(define (sim-avg-update pop adjustf ntimes)
+;; sim-Delta-bar: population (number boolean boolean -> number) number -> number
+;; for the given Delta-i function, compute the Delta-bar from the Delta-i's 
+;; based on one paired-up interaction and update of the given population
+;; but average this over ntimes with the same population and different pairings
+(define (sim-Delta-bar pop adjustf ntimes)
   (average (build-list ntimes
-                       (lambda (_) (- (average (one-iteration-f pop adjustf))
-                                      (average pop))))))
+                       (lambda (_) 
+                         (average (foldl (lambda (pr res)
+                                           (let-values ([(a1-act a2-act conflict-outcome) 
+                                                         (get-agent-interaction (first pr) (second pr))])
+                                             (append (list (adjustf (first pr) a1-act conflict-outcome)
+                                                           (adjustf (second pr) a2-act conflict-outcome))
+                                                     res)))
+                                         empty
+                                         (pair-up pop)))))))
 
 
 ;; sim-avgstd-delta: population (number boolean boolean -> number) -> (list number number)
