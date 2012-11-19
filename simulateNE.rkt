@@ -20,10 +20,11 @@
 
 ;;--- Agent Update Methods ---------------------
 
-;; generic-adjust: agent boolean boolean -> agent
+;; generic-adjust: agent boolean boolean (agent boolean boolean -> number) -> agent
 ;; current agent, the action taken (true=a, false=(1-a)) and the outcome of interaction (true=confilct, false=coordinate)
 ;; yields an adjusted agent according to some method
-
+(define (generic-adjust a act outcome f-delta-i)
+  (+ a (f-delta-i a act outcome)))
 
 ;; adjust-bias : agent boolean boolean -> agent
 ;; given the selected act and the outcome (true means conflict), return the constant-incremented or decremented agent
@@ -43,49 +44,57 @@
 ;; adj-proportional-A: agent boolean boolean -> agent
 ;; given the act chosen by the given agent and the outcome (true means conflict) of that action for the recent pairing,
 ;; compute the new bias according to the PROPORTIONAL-A update rule:
+(define (adj-proportional-A a act outcome)
+  (+ a (delta-i-propA a act outcome)))
+
+;; delta-i-propA: agent boolean boolean -> number
 ;; a_i = a_i + P*(1-a_i) if chose act and coordinate,
 ;; = a_i - P*(a_i) if chose act and conflict,
 ;; = a_i + P*(1-a_i) if chose NOT-act and conflict
 ;; = a_i - P*(a_i) if chose NOT-act and coordinate
 ;; as of 10/9/2011, this version is consistant with the analysis that simplifies to (p-bar_i-hat - p_i)
-(define (adj-proportional-A a act outcome)
-  (cond [act (cond [outcome (- a (* P a))]
-                   [else (+ a (* P (- 1.0 a)))])]
-        [else (cond [outcome (+ a (* P (- 1.0 a)))]
-                    [else (- a (* P a))])]))
+(define (delta-i-propA a act outcome)
+  (cond [act (cond [outcome (- (* P a))]
+                   [else (* P (- 1.0 a))])]
+        [else (cond [outcome (* P (- 1.0 a))]
+                    [else (- (* P a))])]))
 
 ;; adj-proportional-B: agent boolean boolean -> agent
-;; using the other proportional update rule
+;; using the propB proportional update rule
 (define (adj-proportional-B a act outcome)
-  (+ a (adj-prop-update-B a act outcome)))
+  (+ a (delta-i-propB a act outcome)))
 
-;; adj-prop-update-B: agent boolean boolean -> agent
-;; using the other proportional update rule, but return only the update, Delta_i, for this agent
-;; a_i =  + P*(1-a_i) if chose act and coordinate
-;;     =  - P*(1-a_i) if chose act and conflict
-;;     =  + P*a_i if chose NOT-act and conflict
-;;     =  - P*a_i if chose NOT-act and coordinate
-(define (adj-prop-update-B a act outcome)
+;; delta-i-propB: agent boolean boolean -> number
+;; using the propB proportional update rule, but return only the update, Delta_i, for this agent
+;; delta_i =  + P*(1-a_i) if chose act and coordinate
+;;         =  - P*(1-a_i) if chose act and conflict
+;;         =  + P*a_i if chose NOT-act and conflict
+;;         =  - P*a_i if chose NOT-act and coordinate
+(define (delta-i-propB a act outcome)
   (cond [act (cond [outcome (- (* P (- 1.0 a)))]
                    [else (* P (- 1.0 a))])]
         [else (cond [outcome (* P a)]
                     [else (- (* P a))])]))
 
 ;; adj-proportional-C: agent boolean boolean -> agent
-;; using the (new) third proportional update rule
-;; a_i =  + 0.5-(0.5-a_i)^2 if chose act and coordinate
-;;     =  - 0.5-(0.5-a_i)^2 if chose act and conflict
-;;     =  + 0.5-(0.5-a_i)^2 if chose NOT-act and conflict
-;;     =  - 0.5-(0.5-a_i)^2 if chose NOT-act and coordinate
+;; using the propC proportional update rule
 (define (adj-proportional-C a act outcome)
+  (+ a (delta-i-propC a act outcome)))
+
+;; delta-i-propC: agent boolean boolean -> number
+;; using the (new) third proportional update rule
+;; delta_i =  + 0.5-(0.5-a_i)^2 if chose act and coordinate
+;;         =  - 0.5-(0.5-a_i)^2 if chose act and conflict
+;;         =  + 0.5-(0.5-a_i)^2 if chose NOT-act and conflict
+;;         =  - 0.5-(0.5-a_i)^2 if chose NOT-act and coordinate
+(define (delta-i-propC a act outcome)
   (local ([define weight (* P 
-                            (- 0.5 (sqr (- 0.5 a))) ;; this isn't what we want as when a is 0 or 1, it still gives 0.25
-                            ;;(- 1 (sqr (- (* 2 a) 1))) ;; scaling the ends and middle to 0 and 1 respectively
+                            (- 0.25 (sqr (- 0.5 a))) ;; changed this so 0 and 1 both yield 0
                             )])
-    (cond [act (cond [outcome (- a weight)]
-                     [else (+ a weight)])]
-          [else (cond [outcome (+ a weight)]
-                      [else (- a weight)])])))
+    (cond [act (cond [outcome (- weight)]
+                     [else weight])]
+          [else (cond [outcome weight]
+                      [else (- weight)])])))
 
 ;; delta-i-propA2: agent boolean boolean -> agent
 ;; using variation of propA where adjustment is always function of gap yet-to-go with two proportions
@@ -267,6 +276,6 @@
 
 ;(plot-variances-over-time (make-rand-pop 20 0.49 2) 150 adj-proportional-C avg-pbar-delta-propC)
 
-(define a-pop (build-list 50 (lambda (_) (make-beta-pop 20 0.5 .05))))
-(plot-errors-propC a-pop 100 car)
-(plot-errors-propC a-pop 100 cdr)
+;(define a-pop (build-list 50 (lambda (_) (make-beta-pop 20 0.5 .05))))
+;(plot-errors-propC a-pop 100 car)
+;(plot-errors-propC a-pop 100 cdr)
