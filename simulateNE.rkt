@@ -274,8 +274,8 @@
           [define pbar1 (average (build-list n (lambda (_) (average (one-iteration-f pop adj-proportional-C)))))]
           [define pbar2 (average (map + pop (avg-pbar-delta-propC pop)))]
           [define pbar3 (+ pbar (delta-bar-propC pbar (length pop) (variance pop)))])
-    (cons (abs (- pbar1 pbar2)) (abs (- pbar1 pbar3)))
-    (list (- pbar1 pbar) (- pbar2 pbar) (- pbar3 pbar))))
+    (cons (abs (- pbar1 pbar2)) (abs (- pbar1 pbar3)))))
+
 
 ;; plot3d-errors-propC: (listof population) number -> image
 ;; plots one of the errors (determined by selector) calculated by compute-errors-propC for the given population
@@ -294,15 +294,17 @@
 ;; image format must be one of ('auto 'png 'jpeg 'xmb 'xpm 'bmp 'ps 'pdf 'svg)
 (define (plot3d-file-errors-propC pops n selector output-file image-type)
   (local ([define errors (map (lambda (pop) (compute-errors-propC pop n)) pops)])
-   (plot3d-file (list (rectangles3d
+    (plot3d (list (rectangles3d
                    (map (lambda (pop error)
                           (vector (ivl (- (average pop) 0.05) (+ (average pop) 0.05))
                                   (ivl (- (variance pop) 0.005) (+ (variance pop) 0.005))
                                   (ivl 0 (selector error))))
                         pops errors))
                   )
-                 output-file
-                 image-type)))
+            #:x-label "population mean"
+            #:y-label "population variance"
+            #:out-file output-file
+            #:out-kind image-type)))
 
 ;; plot-errors-propC: (listof population) number -> image
 ;; plots each values calculated by compute-errors-propC for the given population
@@ -325,7 +327,7 @@
 ;; plot-delta-bars: (listof population) number -> image
 ;; plot Delta_bars from simulation, theoretical Delta_i, and theoretical (estimated) Delta_bar
 (define (plot-delta-bars pops n)
-  (local ([define errors (map (lambda (pop) (compute-errors-propC pop n)) pops)])
+  (local ([define errors (map (lambda (pop) (bundle-errors-propC pop n)) pops)])
     (plot (list (points
                    (map (lambda (pop error)
                           (vector (average pop)
@@ -367,6 +369,40 @@
                output-file
                image-type)))
 
+;; bundle-errors-propC: (cons number (listof population)) number -> (list number number number)
+;; for a bundle of populations having mean (first pops), compute and average
+(define (bundle-errors-propC pops n)
+  (cons (first pops)
+        (map (lambda (n)
+               (/ n (length (rest pops))))
+             (foldl
+              (lambda (pop trip)
+                (local ([define pbar (average pop)]
+                        [define pbar1 (average (build-list n (lambda (_) (average (one-iteration-f pop adj-proportional-C)))))]
+                        [define pbar2 (average (map + pop (avg-pbar-delta-propC pop)))]
+                        [define pbar3 (+ pbar (delta-bar-propC pbar (length pop) (variance pop)))])
+                  (list (+ (- pbar1 pbar) (first trip))
+                        (+ (- pbar2 pbar) (second trip))
+                        (+ (- pbar3 pbar) (third trip)))))
+              (list 0 0 0)
+              (cdr pops)))))
+
+;; plot-bundle-errs: (listof (cons number (listof population))) number -> image
+;; given bundled populations, run each bundle and then plot three lines
+(define (plot-bundle-errs bpops n)
+  (local ((define errs (map (lambda (bp) (bundle-errors-propC bp n)) bundle-pops)))
+    (plot (list (lines (map (lambda (x) (vector (first x) (second x))) errs) #:color 'red #:style 'dot)
+                (lines (map (lambda (x) (vector (first x) (fourth x))) errs) #:color 'blue #:style 'long-dash)
+                (lines (map (lambda (x) (vector (first x) (- (second x) (fourth x)))) errs) #:color 'green)
+                )
+          #:x-min 0.0 #:x-max 1.0
+          #:y-min -0.004 #:y-max 0.004
+          #:x-label "population mean"
+          #:y-label "average Delta"
+          ;;#:out-file "comparedeltabar.ps"
+          ;;#:out-kind 'ps
+          )))
+
 ;(plot-filtered-simulation (build-list 20 (lambda (_) 0.49)) 150 adj-proportional-B 100 (lambda (l) (< (vector-ref (last l) 1) 0.49)))
 
 #|(plot (list 
@@ -376,18 +412,20 @@
 ;(plot-variances-over-time (make-rand-pop 20 0.49 2) 150 adj-proportional-C avg-pbar-delta-propC)
 
 ;; define buch of populations with different means and variances
-(define pops 
-  (map (lambda (M) (cons M (build-list 5 (lambda (_) (make-beta-pop 10 M 0.05)))))
-       (build-list 9 (lambda (m) (/ (+ m 1) 10)))))
-#|
+(define bundle-pops 
+  (map (lambda (M) (cons M (build-list 40 (lambda (_) (make-beta-pop 40 M 0.07)))))
+       (build-list 17 (lambda (m) (/ (+ m 2) 20)))))
+
+(define pops
   (foldr append empty
          (map (lambda (M)
-                (map (lambda (V) (cons (list M V) (build-list 5 (lambda (_) (make-beta-pop 10 M V)))))
-                     (build-list 4 (lambda (v) (/ (+ (* 2 v) 2) 100))) ;; build the list of variances to use
-                     ))
+                (foldl append empty
+                       (map (lambda (V) (build-list 20 (lambda (_) (make-beta-pop 20 M V))))
+                            (build-list 4 (lambda (v) (/ (+ (* 2 v) 2) 100))) ;; build the list of variances to use
+                            )))
               (build-list 9 (lambda (m) (/ (+ m 1) 10))) ;; build the list of means to use
               )))
-|#
+
 ;(plot-file-errors-propC pops 100 "propC_error.png" 'png)
-;(plot3d-file-errors-propC pops 100 car "propC_3d_error1.png" 'png)
-;(plot3d-file-errors-propC pops 100 cdr "propC_3d_error2.png" 'png)
+;(plot3d-file-errors-propC pops 200 car "propC_3d_error1.ps" 'ps)
+(plot3d-file-errors-propC pops 200 cdr "propC_3d_error2.ps" 'ps)
