@@ -286,6 +286,21 @@
                         pops errors))
                   ))))
 
+;; plot3d-file-errors-propC: (listof population) number -> image
+;; acts like plot3d-errors-propC, but plots to an output file in the given image format 
+;; image format must be one of ('auto 'png 'jpeg 'xmb 'xpm 'bmp 'ps 'pdf 'svg)
+(define (plot3d-file-errors-propC pops n selector output-file image-type)
+  (local ([define errors (map (lambda (pop) (compute-errors-propC pop n)) pops)])
+   (plot3d-file (list (rectangles3d
+                   (map (lambda (pop error)
+                          (vector (ivl (- (average pop) 0.05) (+ (average pop) 0.05))
+                                  (ivl (- (variance pop) 0.005) (+ (variance pop) 0.005))
+                                  (ivl 0 (selector error))))
+                        pops errors))
+                  )
+                 output-file
+                 image-type)))
+
 ;; plot-errors-propC: (listof population) number -> image
 ;; plots one of the errors (determined by selector) calculated by compute-errors-propC for the given population
 (define (plot-errors-propC pops n)
@@ -304,6 +319,27 @@
                    #:color 'blue)
                   ))))
 
+;; plot-file-errors-propC: (listof population) number -> image
+;; acts like plot-errors-propC, but plots to an output file in the given image format 
+;; image format must be one of ('auto 'png 'jpeg 'xmb 'xpm 'bmp 'ps 'pdf 'svg)
+(define (plot-file-errors-propC pops n output-file image-type)
+  (local ([define errors (map (lambda (pop) (compute-errors-propC pop n)) pops)])
+    (plot-file (list (points
+                   (map (lambda (pop error)
+                          (vector (average pop)
+                                  (car error)))
+                        pops errors)
+                   #:color 'red)
+                (points
+                   (map (lambda (pop error)
+                          (vector (average pop)
+                                  (cdr error)))
+                        pops errors)
+                   #:color 'blue)
+                  )
+               output-file
+               image-type)))
+
 ;(plot-filtered-simulation (build-list 20 (lambda (_) 0.49)) 150 adj-proportional-B 100 (lambda (l) (< (vector-ref (last l) 1) 0.49)))
 
 #|(plot (list 
@@ -319,6 +355,6 @@
                                       (build-list 4 (lambda (v) (/ (+ (* 2 v) 2) 100))))))
               (build-list 9 (lambda (m) (/ (+ m 1) 10))))))
 
-(plot-errors-propC pops 100)
-(plot3d-errors-propC pops 100 car)
-(plot3d-errors-propC pops 100 cdr)
+(plot-file-errors-propC pops 100 "propC_error.png" 'png)
+(plot3d-file-errors-propC pops 100 car "propC_3d_error1.png" 'png)
+(plot3d-file-errors-propC pops 100 cdr "propC_3d_error2.png" 'png)
