@@ -265,14 +265,17 @@
         [else (variances-over-time (one-iteration-f pop adjustf) (sub1 n) (cons (variance pop) variances) adjustf)]))
 
 ;; compute-errors-propC: population number -> (pair number number)
-;; For a given a population, compute (1) observed pbar from n match-ups, (2) expected pbar using theoretical delta_i, and
-;; (3) expectd pbar using estimated expression based on pbar and population variance.  Return the errors between 1 and 2, and between 2 and 3.
+;; For a given a population, compute (1) observed pbar from n match-ups,
+;; (2) expected pbar using theoretical delta_i, and
+;; (3) expectd pbar using estimated expression based on pbar and population variance.  
+;; Return the errors between 1 and 2, and between 2 and 3 (or recover Delta_bars)
 (define (compute-errors-propC pop n)
   (local ([define pbar (average pop)]
           [define pbar1 (average (build-list n (lambda (_) (average (one-iteration-f pop adj-proportional-C)))))]
           [define pbar2 (average (map + pop (avg-pbar-delta-propC pop)))]
           [define pbar3 (+ pbar (delta-bar-propC pbar (length pop) (variance pop)))])
-    (cons (abs (- pbar1 pbar2)) (abs (- pbar1 pbar3)))))
+    (cons (abs (- pbar1 pbar2)) (abs (- pbar1 pbar3)))
+    (list (- pbar1 pbar) (- pbar2 pbar) (- pbar3 pbar))))
 
 ;; plot3d-errors-propC: (listof population) number -> image
 ;; plots one of the errors (determined by selector) calculated by compute-errors-propC for the given population
@@ -302,7 +305,7 @@
                  image-type)))
 
 ;; plot-errors-propC: (listof population) number -> image
-;; plots one of the errors (determined by selector) calculated by compute-errors-propC for the given population
+;; plots each values calculated by compute-errors-propC for the given population
 (define (plot-errors-propC pops n)
   (local ([define errors (map (lambda (pop) (compute-errors-propC pop n)) pops)])
     (plot (list (points
@@ -317,6 +320,30 @@
                                   (cdr error)))
                         pops errors)
                    #:color 'blue)
+                  ))))
+
+;; plot-delta-bars: (listof population) number -> image
+;; plot Delta_bars from simulation, theoretical Delta_i, and theoretical (estimated) Delta_bar
+(define (plot-delta-bars pops n)
+  (local ([define errors (map (lambda (pop) (compute-errors-propC pop n)) pops)])
+    (plot (list (points
+                   (map (lambda (pop error)
+                          (vector (average pop)
+                                  (first error)))
+                        pops errors)
+                   #:color 'red)
+                (points
+                   (map (lambda (pop error)
+                          (vector (average pop)
+                                  (second error)))
+                        pops errors)
+                   #:color 'blue)
+                (points
+                   (map (lambda (pop error)
+                          (vector (average pop)
+                                  (third error)))
+                        pops errors)
+                   #:color 'green)
                   ))))
 
 ;; plot-file-errors-propC: (listof population) number -> image
@@ -348,13 +375,19 @@
 
 ;(plot-variances-over-time (make-rand-pop 20 0.49 2) 150 adj-proportional-C avg-pbar-delta-propC)
 
+;; define buch of populations with different means and variances
 (define pops 
-  (foldl append empty
-         (map (lambda (M) (foldl append empty
-                                 (map (lambda (V) (build-list 5 (lambda (_) (make-beta-pop 20 M V))))
-                                      (build-list 4 (lambda (v) (/ (+ (* 2 v) 2) 100))))))
-              (build-list 9 (lambda (m) (/ (+ m 1) 10))))))
-
-(plot-file-errors-propC pops 100 "propC_error.png" 'png)
-(plot3d-file-errors-propC pops 100 car "propC_3d_error1.png" 'png)
-(plot3d-file-errors-propC pops 100 cdr "propC_3d_error2.png" 'png)
+  (map (lambda (M) (cons M (build-list 5 (lambda (_) (make-beta-pop 10 M 0.05)))))
+       (build-list 9 (lambda (m) (/ (+ m 1) 10)))))
+#|
+  (foldr append empty
+         (map (lambda (M)
+                (map (lambda (V) (cons (list M V) (build-list 5 (lambda (_) (make-beta-pop 10 M V)))))
+                     (build-list 4 (lambda (v) (/ (+ (* 2 v) 2) 100))) ;; build the list of variances to use
+                     ))
+              (build-list 9 (lambda (m) (/ (+ m 1) 10))) ;; build the list of means to use
+              )))
+|#
+;(plot-file-errors-propC pops 100 "propC_error.png" 'png)
+;(plot3d-file-errors-propC pops 100 car "propC_3d_error1.png" 'png)
+;(plot3d-file-errors-propC pops 100 cdr "propC_3d_error2.png" 'png)
