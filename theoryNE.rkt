@@ -79,4 +79,4 @@
 
 ;; delta-bar-propC: number number number -> number
 (define (delta-bar-propC pbar psize variance)
-  (* (- (* 2 pbar) 1) (+ (* 0.25 psize) pbar (- (sqr pbar)) (- variance))))
+  (* P (- (* 2 pbar) 1) (- pbar (sqr pbar) variance)))

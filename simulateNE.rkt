@@ -268,20 +268,23 @@
 ;; For a given a population, compute (1) observed pbar from n match-ups, (2) expected pbar using theoretical delta_i, and
 ;; (3) expectd pbar using estimated expression based on pbar and population variance.  Return the errors between 1 and 2, and between 2 and 3.
 (define (compute-errors-propC pop n)
-  (local ([define psize (length pop)]
-          [define pbar (/ (foldl + 0 pop) psize)]
-          [define pbar1 (/ (foldl + 0 (build-list n (lambda (_) (/ (foldl + 0 (one-iteration-f pop adj-proportional-C)) psize)))) n)]
-          [define pbar2 (/ (foldl + 0 (map + pop (avg-pbar-delta-propC pop))) psize)]
-          [define pbar3 (+ pbar (delta-bar-propC pbar psize (variance pop)))])
-            (cons (abs (- pbar1 pbar2)) (abs (- pbar1 pbar3)))))
+  (local ([define pbar (average pop)]
+          [define pbar1 (average (build-list n (lambda (_) (average (one-iteration-f pop adj-proportional-C)))))]
+          [define pbar2 (average (map + pop (avg-pbar-delta-propC pop)))]
+          [define pbar3 (+ pbar (delta-bar-propC pbar (length pop) (variance pop)))])
+    (cons (abs (- pbar1 pbar2)) (abs (- pbar1 pbar3)))))
 
-;; plot-errors-propC: (listof population) number ((pairof number) -> number) -> image
+;; plot-errors-propC: (listof population) number -> image
 ;; plots one of the errors (determined by selector) calculated by compute-errors-propC for the given population
 (define (plot-errors-propC pops n selector)
   (local ([define errors (map (lambda (pop) (compute-errors-propC pop n)) pops)])
-    (plot3d (list (rectangles3d (map (lambda (pop error) (vector (ivl (- (average pop) 0.05) (+ (average pop) 0.05))
-                                                                 (ivl (- (variance pop) 0.005) (+ (variance pop) 0.005))
-                                                                 (ivl 0 (selector error)))) pops errors))))))
+    (plot3d (list (rectangles3d
+                   (map (lambda (pop error)
+                          (vector (ivl (- (average pop) 0.05) (+ (average pop) 0.05))
+                                  (ivl (- (variance pop) 0.005) (+ (variance pop) 0.005))
+                                  (ivl 0 (selector error))))
+                        pops errors))
+                  ))))
 
 ;(plot-filtered-simulation (build-list 20 (lambda (_) 0.49)) 150 adj-proportional-B 100 (lambda (l) (< (vector-ref (last l) 1) 0.49)))
 
@@ -291,9 +294,12 @@
 
 ;(plot-variances-over-time (make-rand-pop 20 0.49 2) 150 adj-proportional-C avg-pbar-delta-propC)
 
-(define pops (foldl append empty (map (lambda (M) (foldl append empty (map (lambda (V) (build-list 5 (lambda (_) (make-beta-pop 20 M V))))
-                                           (build-list 5 (lambda (v) (/ (+ v 2) 100))))))                    
-                          (build-list 9 (lambda (m) (/ (+ m 1) 10))))))
+(define pops 
+  (foldl append empty
+         (map (lambda (M) (foldl append empty
+                                 (map (lambda (V) (build-list 5 (lambda (_) (make-beta-pop 20 M V))))
+                                      (build-list 5 (lambda (v) (/ (+ v 2) 100))))))
+              (build-list 9 (lambda (m) (/ (+ m 1) 10))))))
 
 (plot-errors-propC pops 100 car)
 (plot-errors-propC pops 100 cdr)
