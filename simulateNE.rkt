@@ -274,9 +274,9 @@
           [define pbar3 (+ pbar (delta-bar-propC pbar (length pop) (variance pop)))])
     (cons (abs (- pbar1 pbar2)) (abs (- pbar1 pbar3)))))
 
-;; plot-errors-propC: (listof population) number -> image
+;; plot3d-errors-propC: (listof population) number -> image
 ;; plots one of the errors (determined by selector) calculated by compute-errors-propC for the given population
-(define (plot-errors-propC pops n selector)
+(define (plot3d-errors-propC pops n selector)
   (local ([define errors (map (lambda (pop) (compute-errors-propC pop n)) pops)])
     (plot3d (list (rectangles3d
                    (map (lambda (pop error)
@@ -284,6 +284,24 @@
                                   (ivl (- (variance pop) 0.005) (+ (variance pop) 0.005))
                                   (ivl 0 (selector error))))
                         pops errors))
+                  ))))
+
+;; plot-errors-propC: (listof population) number -> image
+;; plots one of the errors (determined by selector) calculated by compute-errors-propC for the given population
+(define (plot-errors-propC pops n)
+  (local ([define errors (map (lambda (pop) (compute-errors-propC pop n)) pops)])
+    (plot (list (points
+                   (map (lambda (pop error)
+                          (vector (average pop)
+                                  (car error)))
+                        pops errors)
+                   #:color 'red)
+                (points
+                   (map (lambda (pop error)
+                          (vector (average pop)
+                                  (cdr error)))
+                        pops errors)
+                   #:color 'blue)
                   ))))
 
 ;(plot-filtered-simulation (build-list 20 (lambda (_) 0.49)) 150 adj-proportional-B 100 (lambda (l) (< (vector-ref (last l) 1) 0.49)))
@@ -298,8 +316,9 @@
   (foldl append empty
          (map (lambda (M) (foldl append empty
                                  (map (lambda (V) (build-list 5 (lambda (_) (make-beta-pop 20 M V))))
-                                      (build-list 5 (lambda (v) (/ (+ v 2) 100))))))
+                                      (build-list 4 (lambda (v) (/ (+ (* 2 v) 2) 100))))))
               (build-list 9 (lambda (m) (/ (+ m 1) 10))))))
 
-(plot-errors-propC pops 100 car)
-(plot-errors-propC pops 100 cdr)
+(plot-errors-propC pops 100)
+(plot3d-errors-propC pops 100 car)
+(plot3d-errors-propC pops 100 cdr)

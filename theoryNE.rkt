@@ -29,7 +29,7 @@
 
 ;; delta-i-pbar-propC: agent number number -> number
 (define (delta-i-pbar-propC a pbar psize)
-  (* P (- 0.5 (sqr (- 0.5 a))) (- (* 2 pbar) 1)))
+  (* P (- 0.25 (sqr (- 0.5 a))) (- (* 2 pbar) 1)))
      ;(- (* 2 pbar) 1) (+ (* 0.25 psize) pbar (- (sqr pbar)) 
 
 ;; avg-pbar-delta-propA: population -> number
